@@ -1761,6 +1761,7 @@ int cdms2_nccreate(char *filename, int ncmode) {
     }
 #else
     fprintf(stderr,"file created with regular netcdf interface build does not have // enabled\n");
+    fprintf(stderr,"ncmode is: %i\n",ncmode);
     selfncid = nccreate(filename, ncmode);
 #endif
     return selfncid;
@@ -1793,6 +1794,7 @@ PyCdunifFile_Open(char *filename, char *mode)
     acquire_Cdunif_lock();
     /* use netcdf4 is not using shuffle or not cdms classic */
     if ((cdms_classic == 0) || (cdms_shuffle !=0 ) || (cdms_deflate !=0 ) || (cdms_netcdf4 == 1)) {
+      fprintf(stderr,"ok putting nc4 flag\n");
       ncmode = NC_CLOBBER|NC_NETCDF4;
 #ifdef PARALLEL
       /* ok we can only use MPIIO if not using shuffle or deflate for reason
@@ -1806,9 +1808,11 @@ PyCdunifFile_Open(char *filename, char *mode)
 #endif
     }
     else {
+      fprintf(stderr,"64bit offset\n");
       ncmode = NC_CLOBBER | NC_64BIT_OFFSET;
     }
     if (cdms_classic==1) {
+      fprintf(stderr,"nc classic on\n");
       ncmode = ncmode | NC_CLASSIC_MODEL;
     }
     //fprintf(stderr,"ok about to create file\n");
