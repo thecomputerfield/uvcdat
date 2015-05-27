@@ -728,69 +728,191 @@ static int
 nc_put_att_any(int ncid, int varid, const char *name,
 	       nc_type xtype, size_t len, const void *data)
 {
+  fprintf(stderr,"nc put att any %s on var: %i, type: %i\n",name,varid,xtype);
   switch (xtype) {
   case NC_BYTE:
-    return nc_put_att_uchar(ncid, varid, name, xtype, len,
-			    (unsigned char *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_uchar(ncid, varid, name, xtype, len,
+                  (unsigned char *)data);
+    }
+    else {
+#endif
+      return nc_put_att_uchar(ncid, varid, name, xtype, len,
+                  (unsigned char *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
   case NC_CHAR:
-    return nc_put_att_text(ncid, varid, name, len,
-			   (char *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_text(ncid, varid, name, len,
+                 (char *)data);
+    }
+    else {
+#endif
+      return nc_put_att_text(ncid, varid, name, len,
+                 (char *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
   case NC_SHORT:
-    return nc_put_att_short(ncid, varid, name, xtype, len,
-			    (short *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_short(ncid, varid, name, xtype, len,
+                  (short *)data);
+    }
+    else {
+#endif
+      return nc_put_att_short(ncid, varid, name, xtype, len,
+                  (short *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
   case NC_INT:
-    return nc_put_att_int(ncid, varid, name, xtype, len,
-			   (int *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_int(ncid, varid, name, xtype, len,
+                 (int *)data);
+    }
+    else {
+#endif
+      return nc_put_att_int(ncid, varid, name, xtype, len,
+                 (int *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
   case NC_FLOAT:
-    return nc_put_att_float(ncid, varid, name, xtype, len,
-			    (float *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_float(ncid, varid, name, xtype, len,
+                  (float *)data);
+    }
+    else {
+#endif
+      return nc_put_att_float(ncid, varid, name, xtype, len,
+                  (float *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
   case NC_DOUBLE:
-    return nc_put_att_double(ncid, varid, name, xtype, len,
-			     (double *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_double(ncid, varid, name, xtype, len,
+                   (double *)data);
+    }
+    else {
+#endif
+      return nc_put_att_double(ncid, varid, name, xtype, len,
+                   (double *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
     /* need the following #ifdef for linking against netcdf3 */
 #ifdef NC_UBYTE
   case NC_UBYTE:
-    return nc_put_att_ubyte(ncid, varid, name, xtype, len,
-			     (unsigned char *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_ubyte(ncid, varid, name, xtype, len,
+                   (unsigned char *)data);
+    }
+    else {
+#endif
+      return nc_put_att_ubyte(ncid, varid, name, xtype, len,
+                   (unsigned char *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;    
 #endif
 #ifdef NC_USHORT
   case NC_USHORT:
-    return nc_put_att_ushort(ncid, varid, name, xtype, len,
-			     (unsigned short *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_ushort(ncid, varid, name, xtype, len,
+                   (unsigned short *)data);
+    }
+    else {
+#endif
+      return nc_put_att_ushort(ncid, varid, name, xtype, len,
+                   (unsigned short *)data);
+#ifdef PARALLEL
+    }
+#endif
     break; 
 #endif
 #ifdef NC_UINT   
   case NC_UINT:
-    return nc_put_att_uint(ncid, varid, name, xtype, len,
-			     (unsigned int *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_uint(ncid, varid, name, xtype, len,
+                   (unsigned int *)data);
+    }
+    else {
+#endif
+      return nc_put_att_uint(ncid, varid, name, xtype, len,
+                   (unsigned int *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;   
 #endif
 #ifdef NC_INT64 
   case NC_INT64:
-    return nc_put_att_longlong(ncid, varid, name, xtype, len,
-			     (long long *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_longlong(ncid, varid, name, xtype, len,
+                   (long long *)data);
+    }
+    else {
+#endif
+      return nc_put_att_longlong(ncid, varid, name, xtype, len,
+                   (long long *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
 #endif
 #ifdef NC_UINT64
   case NC_UINT64:
-    return nc_put_att_ulonglong(ncid, varid, name, xtype, len,
-			     (unsigned long long *)data);
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      return ncmpi_put_att_ulonglong(ncid, varid, name, xtype, len,
+                   (unsigned long long *)data);
+    }
+    else {
+#endif
+      return nc_put_att_ulonglong(ncid, varid, name, xtype, len,
+                   (unsigned long long *)data);
+#ifdef PARALLEL
+    }
+#endif
     break;
 #endif
 #ifdef NC_STRING
   case NC_STRING:
-    return nc_put_att_string(ncid, varid, name, len,
-			     (char **)data);
-    break;
-  default:
+#ifdef PARALLEL
+    if (use_pnetcdf(ncid) == 1) {
+      fprintf(stderr,"unsupported type in pnetcdf\n");
+      return nc_put_att_string(ncid, varid, name, len,
+                   (char **)data);
+    }
+    else {
 #endif
+      return nc_put_att_string(ncid, varid, name, len,
+                   (char **)data);
+#ifdef PARALLEL
+    }
+#endif
+    break;
+#endif
+  default:
     return NC_EINVAL;
   }
 }

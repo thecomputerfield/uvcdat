@@ -134,6 +134,7 @@ class FileVariable(DatasetVariable):
             raise CDMSError, FileClosedWrite+self.id
         if (not name in self.__cdms_internals__) and (value is not None) and (name[0]!='_'):
             try:
+                print "setting attribute ",name,"value",value,"type",type(value)
                 setattr(self._obj_, name, value)
             except CdunifError:
                 raise CDMSError, "Setting %s.%s=%s"%(self.id,name,`value`)
