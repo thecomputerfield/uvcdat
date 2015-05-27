@@ -971,15 +971,6 @@ nc_put_var1_any(int ncid, int varid, nc_type xtype, const size_t *indexp,
     return NC_EINVAL;
   }
 }
-static int cdms2_nc_put_var1_any(int ncid, int varid, nc_type xtype, const size_t *indexp,
-            const void *data) {
-  //fprintf(stderr,"nc_put_var1_any %i, type: %i\n",my_mpi_rank(),xtype);
-  int ret;
-  ret = nc_put_var1_any(ncid, varid, xtype, indexp, data);
-  //fprintf(stderr,"nc_put_var1_any %i done ierr: %i\n",my_mpi_rank(),ret);
-  return ret;
-}
-
 static int
 nc_put_vars_any(int ncid, int varid, nc_type xtype, const size_t start[],
 		const size_t count[], const ptrdiff_t stride[],
@@ -1176,25 +1167,6 @@ nc_put_vars_any(int ncid, int varid, nc_type xtype, const size_t start[],
   default:
     return NC_EINVAL;
   }
-}
-
-static int
-cdms2_nc_put_vars_any(int ncid, int varid, nc_type xtype, const size_t start[],
-		const size_t count[], const ptrdiff_t stride[],
-		const void *data)
-{
-#ifdef PARALLEL
-  fprintf(stderr,"nc_put_vars_any, rank %i\n",my_mpi_rank());
-#endif
-  int ierr;
-  ierr = nc_put_vars_any(ncid, varid, xtype, start, count, stride, data);
-  if (ierr != NC_NOERR) {
-    fprintf(stderr,"got an error writing data %i i.e: %s\n",ierr,nc_strerror(ierr));
-  }
-  else {
-    fprintf(stderr,"put varsany went ok\n");
-  }
-  return ierr;
 }
 
 static int
@@ -1618,13 +1590,6 @@ int cdms2_nc_put_att_text(int fileid, int varid, char *name, int len, char *stri
   return ret;
 }
 
-int cdms2_nc_put_att_any(int fileid, int varid, char *name, int type, int len, void *data) {
-  int ret;
-  //fprintf(stderr,"nc_put_att_any, att: %s, rk: %i\n",name,my_mpi_rank());
-  ret = nc_put_att_any(fileid, varid, name, type, len, data);
-  return ret;
-}
-
 static int
 set_attribute(int fileid, int varid, PyObject *attributes,
 	      char *name, PyObject *value)
@@ -1666,7 +1631,7 @@ set_attribute(int fileid, int varid, PyObject *attributes,
       }
       Py_BEGIN_ALLOW_THREADS;
       acquire_Cdunif_lock();
-      ret = cdms2_nc_put_att_any(fileid, varid, name, type, len, array->data);
+      ret = nc_put_att_any(fileid, varid, name, type, len, array->data);
       release_Cdunif_lock();
       Py_END_ALLOW_THREADS;
       if (ret != NC_NOERR) {
@@ -3062,7 +3027,7 @@ PyCdunifVariable_WriteArray(PyCdunifVariableObject *self,
       size_t zero = 0;
       Py_BEGIN_ALLOW_THREADS;
       acquire_Cdunif_lock();
-      error = cdms2_nc_put_var1_any(self->file->id, self->id,
+      error = nc_put_var1_any(self->file->id, self->id,
 			      cdunif_type_from_type(self->type), &zero,
 			      array->data);
       release_Cdunif_lock();
@@ -3127,7 +3092,7 @@ PyCdunifVariable_WriteArray(PyCdunifVariableObject *self,
 	acquire_Cdunif_lock();
 	error = NC_NOERR;
 	while (repeat--) {
-	  error = cdms2_nc_put_vars_any(self->file->id, self->id,
+	  error = nc_put_vars_any(self->file->id, self->id,
 				  cdunif_type_from_type(self->type),
 				  start, count1, stride, array->data);
 	  if (error != NC_NOERR)
