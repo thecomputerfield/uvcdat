@@ -259,6 +259,7 @@ static int cdattname(PyCdunifFileObject *file, int varid, int attnum, char* name
 		return cuattname(file->id,varid,attnum,name);
 }
 
+#ifdef PARALLEL
 /* function to test ncmode flags */
 int nc_flag_on(int mode, int flag) {
   return ((mode & flag) == flag);
@@ -268,7 +269,6 @@ int nc_flag_on(int mode, int flag) {
  * API for PNETCDF
  * i.e. NC3 format and PARALLEL defined
  */
-#ifdef PARALLEL
 int use_pnetcdf(int ncid) {
   int format;
   int ncmode;
@@ -346,6 +346,7 @@ static int cddimget(PyCdunifFileObject *file, int dimid, void *values){
         }
 #endif
 		if(ierr != NC_NOERR ){
+          fprintf(stderr,"error in ncdiminq\n");
 			return -1;
 		}
 		
@@ -433,16 +434,17 @@ static int cddiminq(PyCdunifFileObject *file, int dimid, char* dimname, char *di
         int ierr;
 #ifdef PARALLEL
         if (use_pnetcdf(cdfid) == 1) {
-          ierr = ncmpi_inq_dim(cdfid, dimid, dimname, &len);
+          ierr = ncmpi_inq_dim(cdfid, dimid, dname, &len);
           fprintf(stderr,"used mpi di inq ierr: %i, name: %s, len: %d\n",ierr,dimname,len);
         }
         else {
 #endif
-          ierr = nc_inq_dim(cdfid, dimid, dimname, &len);
+          ierr = nc_inq_dim(cdfid, dimid, dname, &len);
 #ifdef PARALLEL
         }
 #endif
 		if(ierr != NC_NOERR){
+          fprintf(stderr,"error here in ncdiminq\n");
 			return -1;
 		}
 		if(dimname) strncpy(dimname,dname,CU_MAX_NAME);
@@ -1356,10 +1358,12 @@ define_mode(PyCdunifFileObject *file, int define_flag)
   if (file->define != define_flag) {
     Py_BEGIN_ALLOW_THREADS;
     acquire_Cdunif_lock();
+    int ierr;
     if (file->define)
-      cdendef(file);
+      ierr = cdendef(file);
     else
-      cdredef(file);
+      ierr = cdredef(file);
+    fprintf(stderr,"OK IN DEF MODE: %i\n",ierr);
     release_Cdunif_lock();
     file->define = define_flag;
     Py_END_ALLOW_THREADS;
@@ -1981,6 +1985,7 @@ PyCdunifFile_CreateDimension(PyCdunifFileObject *file, char *name, long size)
 #ifdef PARALLEL
     }
 #endif
+    fprintf(stderr,"in create dim: id: %i, size: %i, ierr: %i\n",id,size,ierr);
     if ( ierr != NC_NOERR ) {
       id = -1;
     }
@@ -1997,6 +2002,7 @@ PyCdunifFile_CreateDimension(PyCdunifFileObject *file, char *name, long size)
       }
       else {
 	size_ob = PyInt_FromLong(size);
+    fprintf(stderr,"SETTING DIM DICT %s to len: %i\n",name,size);
 	PyDict_SetItemString(file->dimensions, name, size_ob);
 	Py_DECREF(size_ob);
       }
@@ -2036,13 +2042,16 @@ static char createDimension_doc[] = "";
 
 int cdms2_nc_def_var(int id,char *name, int ntype, int ndim, int *dimids, int *i) {
   int ret;
-  //fprintf(stderr,"nc_defvar %i\n",my_mpi_rank());
+  fprintf(stderr,"nc_defvar %s\n",name);
 #ifdef PARALLEL
   if (use_pnetcdf(id) ==1 ) {
     ret = ncmpi_def_var(id, name, ntype, ndim, dimids, i);
   }
   else {
 #endif
+    fprintf(stderr,"ndims: %i\n",ndim);
+    int j;
+    for (j=0;j<ndim;j++) fprintf(stderr,"Dim %i id is: %i\n",j,dimids[j]);
     ret = nc_def_var(id, name, ntype, ndim, dimids, i);
 #ifdef PARALLEL
   }
