@@ -74,6 +74,7 @@ Cdunif_seterror(void)
     error = "No error";
     break;
   case NC_EBADID:
+    fprintf(stderr,"yes we come here for error settingi %i\n",NC_EBADID);
     error = "Not a Cdunif id";
     break;
   case NC_ENFILE:
@@ -659,8 +660,28 @@ static int cdvarget1(PyCdunifFileObject *file, int varid, const long mindex[], v
 	}
 }
 static int cdvargets(PyCdunifFileObject *file, int varid, const long start[], const long count[], const long stride[], void *values){
-	if (file->filetype==CuNetcdf)
-		return ncvargetg(file->id,varid,start,count,stride,NULL,values);
+	if (file->filetype==CuNetcdf) {
+        int ierr;
+#ifdef PARALLEL
+        if (use_pnetcdf(file->id) == 1) {
+          fprintf(stderr,"ok off we go to vargetm\n");
+          ierr = ncmpi_get_varm(file->id,varid,start,count,stride,NULL,values);
+          fprintf(stderr,"it gave us error: %i\n",ierr);
+          if (ierr != NC_NOERR) {
+            fprintf(stderr,"Error was: %s\n",nc_strerror(ierr));
+            return -1;
+          }
+          else {
+            return ierr;
+          }
+        }
+        else {
+#endif
+          return ncvargetg(file->id,varid,start,count,stride,NULL,values);
+#ifdef PARALLEL
+        }
+#endif
+    }
 	else
 		return cuvargets(file->id,varid,NULL,start,count,stride,0,values);
 }
@@ -2748,6 +2769,7 @@ PyCdunifVariableObject_getslice(PyCdunifVariableObject *self, PyObject *args) {
 
   if (!PyArg_ParseTuple(args, "ii", &low, &high))
 	  return NULL;
+  fprintf(stderr,"ok is this this get slice\n");
   return PyCdunifVariableObject_slice(self,low,high);
 }
 
@@ -2946,10 +2968,13 @@ PyCdunifVariable_ReadAsArray(PyCdunifVariableObject *self,
   int error = 0;
   d = 0;
   nitems = 1;
+  fprintf(stderr,"just before check if open\n");
   if (!check_if_open(self->file, -1)) {
     free(indices);
+    fprintf(stderr,"check failed\n");
     return NULL;
   }
+  fprintf(stderr,"ok might have worked going to define mode\n");
   define_mode(self->file, 0);
   if (self->nd == 0)
     dims = NULL;
@@ -2999,6 +3024,7 @@ PyCdunifVariable_ReadAsArray(PyCdunifVariableObject *self,
       int ret;
       Py_BEGIN_ALLOW_THREADS;
       acquire_Cdunif_lock();
+      fprintf(stderr,"ok cdvarget1\n");
       ret = cdvarget1(self->file, self->id, &zero, array->data);
       release_Cdunif_lock();
       Py_END_ALLOW_THREADS;
@@ -3024,7 +3050,9 @@ PyCdunifVariable_ReadAsArray(PyCdunifVariableObject *self,
 	}
 	Py_BEGIN_ALLOW_THREADS;
 	acquire_Cdunif_lock();
+    fprintf(stderr,"ok cdvargets\n");
 	ret = cdvargets(self->file, self->id, start, count, stride, array->data);
+    fprintf(stderr,"back from cdvargets\n");
 	release_Cdunif_lock();
 	Py_END_ALLOW_THREADS;
 	if (ret == -1) {
@@ -3223,6 +3251,7 @@ PyCdunifVariable_WriteArray(PyCdunifVariableObject *self,
 	acquire_Cdunif_lock();
 	error = NC_NOERR;
 	while (repeat--) {
+      fprintf(stderr,"REPEAT VARPUTS IS: %i\n",repeat);
 	  error = nc_put_vars_any(self->file->id, self->id,
 				  cdunif_type_from_type(self->type),
 				  start, count1, stride, array->data);
@@ -3270,6 +3299,7 @@ PyCdunifVariable_WriteArray(PyCdunifVariableObject *self,
     Py_DECREF(array);
     free(dims);
     free(indices);
+    fprintf(stderr,"done here\n");
     return ret;
   }
   else {
@@ -3360,6 +3390,7 @@ PyCdunifVariableObject_slice(PyCdunifVariableObject *self, Py_ssize_t low, Py_ss
   if (indices != NULL) {
     indices[0].start = low;
     indices[0].stop = high;
+    fprintf(stderr,"almsot there slice\n");
     return PyArray_Return(PyCdunifVariable_ReadAsArray(self, indices));
   }
   return NULL;
