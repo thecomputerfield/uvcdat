@@ -314,10 +314,25 @@ cdat_add_test(vcs_test_taylor_2_quads
       "${PYTHON_EXECUTABLE}"
       ${cdat_SOURCE_DIR}/testing/vcs/test_boxfill_number_color_more_than_number_levels.py
       )
+    cdat_add_test(test_vcs_user_passed_date
+      "${PYTHON_EXECUTABLE}"
+      ${cdat_SOURCE_DIR}/testing/vcs/test_vcs_user_passed_date.py
+      "${BASELINE_DIR}/test_vcs_user_passed_date.png"
+      )
+    cdat_add_test(test_vcs_user_passed_date_as_string
+      "${PYTHON_EXECUTABLE}"
+      ${cdat_SOURCE_DIR}/testing/vcs/test_vcs_user_passed_date_as_string.py
+      "${BASELINE_DIR}/test_vcs_user_passed_date_as_string.png"
+      )
     cdat_add_test(test_vcs_auto_time_labels
       "${PYTHON_EXECUTABLE}"
       ${cdat_SOURCE_DIR}/testing/vcs/test_vcs_auto_time_labels.py
       "${BASELINE_DIR}/test_vcs_auto_time_labels.png"
+      )
+    cdat_add_test(test_vcs_isofill_data_read_north_to_south
+      "${PYTHON_EXECUTABLE}"
+      ${cdat_SOURCE_DIR}/testing/vcs/test_vcs_isofill_data_read_north_to_south.py
+      "${BASELINE_DIR}/test_vcs_isofill_data_read_north_to_south.png"
       )
     cdat_add_test(test_vcs_lon_axes_freak_out
       "${PYTHON_EXECUTABLE}"
@@ -656,5 +671,15 @@ cdat_add_test(vcs_test_colorpicker_appearance
   ${cdat_SOURCE_DIR}/testing/vcs/test_vcs_colorpicker_appearance.py
   ${BASELINE_DIR}/test_vcs_colorpicker_appearance.png
 )
+
+# Run pep8 to check code style:
+add_test(vcs_pep8
+  "${CMAKE_INSTALL_PREFIX}/bin/pep8"
+  # --count is needed so that the exit code is nonzero when errors are found.
+  --count
+  # Add more file/dir paths or modify this one to expand the coverage:
+  "${cdat_SOURCE_DIR}/Packages/vcs/Lib/vcsvtk/"
+)
+
 add_subdirectory(vtk_ui)
 add_subdirectory(editors)

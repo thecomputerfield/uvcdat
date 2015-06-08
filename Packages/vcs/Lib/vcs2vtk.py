@@ -36,8 +36,6 @@ def putMaskOnVTKGrid(data,grid,actorColor=None,cellData=True,deep=True):
   imsk =  numpy_to_vtk_wrapper(msk.astype(numpy.int).flat,deep=deep)
   mapper = None
   if msk is not numpy.ma.nomask and not numpy.allclose(msk,False):
-      msk =  numpy_to_vtk_wrapper(numpy.logical_not(msk).astype(numpy.uint8).flat,deep=deep)
-      nomsk = numpy_to_vtk_wrapper(numpy.ones(data.mask.shape,numpy.uint8).flat,deep=deep)
       if actorColor is not None:
           if grid.IsA("vtkStructuredGrid"):
             grid2 = vtk.vtkStructuredGrid()
@@ -49,8 +47,8 @@ def putMaskOnVTKGrid(data,grid,actorColor=None,cellData=True,deep=True):
           r,g,b = actorColor
           lut.SetNumberOfTableValues(2)
           if not cellData:
-              if grid2.IsA("vtkStructuredGrid"):
-                  grid2.SetPointVisibilityArray(nomsk)
+              grid2.GetPointData().RemoveArray(
+                    vtk.vtkDataSetAttributes.GhostArrayName())
               grid2.GetPointData().SetScalars(imsk)
               #grid2.SetCellVisibilityArray(imsk)
               #p2c = vtk.vtkPointDataToCellData()
@@ -60,8 +58,8 @@ def putMaskOnVTKGrid(data,grid,actorColor=None,cellData=True,deep=True):
               lut.SetTableValue(0,r/100.,g/100.,b/100.,1.)
               lut.SetTableValue(1,r/100.,g/100.,b/100.,1.)
           else:
-              if grid2.IsA("vtkStructuredGrid"):
-                  grid2.SetCellVisibilityArray(nomsk)
+              grid2.GetCellData().RemoveArray(
+                    vtk.vtkDataSetAttributes.GhostArrayName())
               grid2.GetCellData().SetScalars(imsk)
               geoFilter.SetInputData(grid2)
               lut.SetTableValue(0,r/100.,g/100.,b/100.,0.)
@@ -71,11 +69,24 @@ def putMaskOnVTKGrid(data,grid,actorColor=None,cellData=True,deep=True):
           mapper.SetInputData(geoFilter.GetOutput())
           mapper.SetLookupTable(lut)
           mapper.SetScalarRange(0,1)
-      if grid.IsA("vtkStructuredGrid"):
-        if not cellData:
-          grid.SetPointVisibilityArray(msk)
-        else:
-          grid.SetCellVisibilityArray(msk)
+
+      # The ghost array now stores information about hidden (blanked)
+      # points/cells. Setting an array entry to the bitwise value
+      # `vtkDataSetAttributes.HIDDEN(CELL|POINT)` will blank the cell/point.
+      flatMask = msk.flat
+      ghost = numpy.zeros(len(flatMask), dtype=numpy.uint8)
+      invalidMaskValue = vtk.vtkDataSetAttributes.HIDDENCELL if cellData else \
+                         vtk.vtkDataSetAttributes.HIDDENPOINT
+      for i, isInvalid in enumerate(flatMask):
+          if isInvalid:
+              ghost[i] = invalidMaskValue
+
+      ghost = numpy_to_vtk_wrapper(ghost, deep=deep)
+      ghost.SetName(vtk.vtkDataSetAttributes.GhostArrayName())
+      if cellData:
+          grid.GetCellData().AddArray(ghost)
+      else:
+          grid.GetPointData().AddArray(ghost)
   return mapper
 
 def genGridOnPoints(data1,gm,deep=True,grid=None,geo=None):
@@ -87,6 +98,10 @@ def genGridOnPoints(data1,gm,deep=True,grid=None,geo=None):
     if grid is None:
       x = g.getLongitude()[:]
       y = g.getLatitude()[:]
+      xm = x[0]
+      xM = x[-1]
+      ym = y[0]
+      yM = y[-1]
     continents=True
     wrap=[0,360]
     if isinstance(g,cdms2.gengrid.AbstractGenericGrid): # Ok need unstrctured grid
@@ -97,6 +112,10 @@ def genGridOnPoints(data1,gm,deep=True,grid=None,geo=None):
     if grid is None:
       x=data1.getAxis(-1)[:]
       y=data1.getAxis(-2)[:]
+      xm = x[0]
+      xM = x[-1]
+      ym = y[0]
+      yM = y[-1]
 
   if grid is None:
     if x.ndim==1:
@@ -109,10 +128,14 @@ def genGridOnPoints(data1,gm,deep=True,grid=None,geo=None):
     x=numpy.reshape(x,sh)
     y=numpy.reshape(y,sh)
     #Ok we have our points in 2D let's create unstructured points grid
-    xm=x.min()
-    xM=x.max()
-    ym=y.min()
-    yM=y.max()
+    if xm is None:
+        xm=x.min()
+    if xM is None:
+        xM=x.max()
+    if ym is None:
+        ym=y.min()
+    if yM is None:
+        yM=y.max()
     z = numpy.zeros(x.shape)
     m3 = numpy.concatenate((x,y),axis=1)
     m3 = numpy.concatenate((m3,z),axis=1)
@@ -1421,35 +1444,6 @@ def generateVectorArray(data1,data2,vtk_grid):
     w = numpy_to_vtk_wrapper(w,deep=False)
     w.SetName("vectors")
     return w
-
-def stripGrid(vtk_grid):
-    # Strip out masked points.
-    if vtk_grid.IsA("vtkStructuredGrid"):
-        if vtk_grid.GetCellBlanking():
-            visArray = vtk_grid.GetCellVisibilityArray()
-            visArray.SetName("BlankingArray")
-            vtk_grid.GetCellData().AddArray(visArray)
-            thresh = vtk.vtkThreshold()
-            thresh.SetInputData(vtk_grid)
-            thresh.ThresholdByUpper(0.5)
-            thresh.SetInputArrayToProcess(0, 0, 0,
-                                          "vtkDataObject::FIELD_ASSOCIATION_CELLS",
-                                          "BlankingArray")
-            thresh.Update()
-            vtk_grid = thresh.GetOutput()
-        elif vtk_grid.GetPointBlanking():
-            visArray = vtk_grid.GetPointVisibilityArray()
-            visArray.SetName("BlankingArray")
-            vtk_grid.GetPointData().AddArray(visArray)
-            thresh = vtk.vtkThreshold()
-            thresh.SetInputData(vtk_grid)
-            thresh.SetUpperThreshold(0.5)
-            thresh.SetInputArrayToProcess(0, 0, 0,
-                                          "vtkDataObject::FIELD_ASSOCIATION_POINTS",
-                                          "BlankingArray")
-            thresh.Update()
-            vtk_grid = thresh.GetOutput()
-    return vtk_grid
 
 def vtkIterate(iterator):
     iterator.InitTraversal()
